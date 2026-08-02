@@ -118,14 +118,13 @@
 					e.preventDefault();
 					const formData = new FormData(e.currentTarget);
 					const attemptData = formData.get('attempt');
+
 					if (!attemptData) {
 						return;
 					}
 
 					const attempt = attemptData.toString().toLowerCase().trim();
-					// const expandedAttempt = expand(attempt);
 
-					// eslint-disable-next-line svelte/prefer-svelte-reactivity
 					const identifiedFeatures = data.features.filter((d) => {
 						const street = d.properties.FULLNAME.toLowerCase();
 						return street === attempt;

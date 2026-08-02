@@ -38,6 +38,8 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1095.0",
     "@aws-sdk/lib-storage": "^3.1095.0",
+    "@turf/area": "^7.3.5",
+    "@turf/bbox-polygon": "^7.3.5",
     "@types/geojson": "^7946.0.16",
     "flatgeobuf": "^4.4.0",
     "mapbox-gl": "^3.27.0"

@@ -3,6 +3,8 @@ import type { Feature, MultiLineString } from 'geojson';
 import { deserialize } from 'flatgeobuf/lib/mjs/geojson';
 import { dev } from '$app/env';
 import { error } from '@sveltejs/kit';
+import bboxPolygon from '@turf/bbox-polygon';
+import area from '@turf/area';
 
 // https://www2.census.gov/geo/pdfs/maps-data/data/tiger/tgrshp2025/2025_TIGERLINE_GDB_Record_Layouts.pdf
 // Page 16: Roads National Geodatabase
@@ -23,16 +25,40 @@ interface RoadProperties {
 
 type RoadFeature = Feature<MultiLineString, RoadProperties>;
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ url }) => {
+	const bboxParam = url.searchParams.get('bbox') ?? '-74.045633,40.680694,-73.905651,40.881714';
+	const coordinates = bboxParam.split(',').map((d) => Number(d));
+
+	if (coordinates.length !== 4 || coordinates.some((d) => isNaN(d))) {
+		error(400, {
+			message: 'Could not parse bbox from search parameters'
+		});
+	}
+
 	const bbox = {
-		minX: -74.045633,
-		minY: 40.680694,
-		maxX: -73.905651,
-		maxY: 40.881714
+		minX: coordinates[0],
+		minY: coordinates[1],
+		maxX: coordinates[2],
+		maxY: coordinates[3]
 	};
+
+	const polygon = bboxPolygon(coordinates as [number, number, number, number]);
+	const bboxAreaSqKm = area(polygon) / 1_000_000;
+
+	if (bboxAreaSqKm > 3_000) {
+		error(400, {
+			message: 'Provided bbox is larger than 3000 sq km'
+		});
+	}
 
 	const fgb = deserialize('https://r2.erxclau.me/us.fgb', bbox) as AsyncGenerator<RoadFeature>;
 	const features = await Array.fromAsync(fgb);
+
+	if (features.length === 0) {
+		error(400, {
+			message: 'Provided bbox contains no U.S. streets'
+		});
+	}
 
 	if (dev) {
 		if (!features.every((d) => d.geometry.type === 'MultiLineString')) {
