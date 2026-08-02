@@ -1,4 +1,4 @@
-import type { PageServerLoad } from './$types';
+import type { PageLoad } from './$types';
 import type { Feature, MultiLineString } from 'geojson';
 import { deserialize } from 'flatgeobuf/lib/mjs/geojson';
 import { dev } from '$app/env';
@@ -26,8 +26,12 @@ interface RoadProperties {
 
 type RoadFeature = Feature<MultiLineString, RoadProperties>;
 
-export const load: PageServerLoad = async ({ url }) => {
-	const bboxParam = url.searchParams.get('bbox') ?? '-74.25495722091921,40.49787772944257,-73.70000924119739,40.91510284353152';
+export const ssr = false;
+
+export const load: PageLoad = async ({ url }) => {
+	const bboxParam =
+		url.searchParams.get('bbox') ??
+		'-74.25495722091921,40.49787772944257,-73.70000924119739,40.91510284353152';
 	const coordinates = bboxParam.split(',').map((d) => Number(d));
 
 	if (coordinates.length !== 4 || coordinates.some((d) => isNaN(d))) {
