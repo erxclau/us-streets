@@ -5,6 +5,7 @@ import { dev } from '$app/env';
 import { error } from '@sveltejs/kit';
 import bboxPolygon from '@turf/bbox-polygon';
 import area from '@turf/area';
+import length from '@turf/length';
 
 // https://www2.census.gov/geo/pdfs/maps-data/data/tiger/tgrshp2025/2025_TIGERLINE_GDB_Record_Layouts.pdf
 // Page 16: Roads National Geodatabase
@@ -59,28 +60,31 @@ export const load: PageLoad = async ({ url }) => {
 		dev ? '/us.fgb' : 'https://r2.erxclau.me/us.fgb',
 		bbox
 	) as AsyncGenerator<RoadFeature>;
-	const features = Array.fromAsync(fgb);
+	const features = await Array.fromAsync(fgb);
 
-	// if (features.length === 0) {
-	// 	error(400, {
-	// 		message: 'Provided bbox contains no U.S. streets'
-	// 	});
-	// }
+	if (features.length === 0) {
+		error(400, {
+			message: 'Provided bbox contains no U.S. streets'
+		});
+	}
 
-	// if (dev) {
-	// 	if (!features.every((d) => d.geometry.type === 'MultiLineString')) {
-	// 		console.error(features.filter((d) => d.geometry.type !== 'MultiLineString'));
-	// 		error(400, {
-	// 			message: `Features with non-MultiLineString geometry type`
-	// 		});
-	// 	}
-	// }
+	if (dev) {
+		if (!features.every((d) => d.geometry.type === 'MultiLineString')) {
+			console.error(features.filter((d) => d.geometry.type !== 'MultiLineString'));
+			error(400, {
+				message: `Features with non-MultiLineString geometry type`
+			});
+		}
+	}
 
 	return {
 		features,
 		bbox: {
 			coordinates: bbox,
 			polygon
-		}
+		},
+		mileLength: features
+			.map((f) => length(f, { units: 'miles' }))
+			.reduce((prev, curr) => prev + curr, 0)
 	};
 };
