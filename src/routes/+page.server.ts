@@ -5,6 +5,7 @@ import { dev } from '$app/env';
 import { error } from '@sveltejs/kit';
 import bboxPolygon from '@turf/bbox-polygon';
 import area from '@turf/area';
+import length from '@turf/length';
 
 // https://www2.census.gov/geo/pdfs/maps-data/data/tiger/tgrshp2025/2025_TIGERLINE_GDB_Record_Layouts.pdf
 // Page 16: Roads National Geodatabase
@@ -26,7 +27,7 @@ interface RoadProperties {
 type RoadFeature = Feature<MultiLineString, RoadProperties>;
 
 export const load: PageServerLoad = async ({ url }) => {
-	const bboxParam = url.searchParams.get('bbox') ?? '-74.045633,40.680694,-73.905651,40.881714';
+	const bboxParam = url.searchParams.get('bbox') ?? '-74.25495722091921,40.49787772944257,-73.70000924119739,40.91510284353152';
 	const coordinates = bboxParam.split(',').map((d) => Number(d));
 
 	if (coordinates.length !== 4 || coordinates.some((d) => isNaN(d))) {
@@ -69,5 +70,14 @@ export const load: PageServerLoad = async ({ url }) => {
 		}
 	}
 
-	return { features, bbox };
+	return {
+		features,
+		bbox: {
+			coordinates: bbox,
+			polygon
+		},
+		mileLength: features
+			.map((f) => length(f, { units: 'miles' }))
+			.reduce((prev, curr) => prev + curr, 0)
+	};
 };

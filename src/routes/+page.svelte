@@ -1,19 +1,44 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
+	import { SvelteSet } from 'svelte/reactivity';
 
 	import { Map as MapboxMap, type FeatureSelector } from 'mapbox-gl/esm';
 	import 'mapbox-gl/dist/mapbox-gl.css';
+	import length from '@turf/length';
+	import { ascending } from 'd3-array';
 
 	import { PUBLIC_MAPBOX_TOKEN } from '$env/static/public';
-	import { SvelteSet } from 'svelte/reactivity';
 
 	let { data } = $props();
+
+	const modalId = 'confirm-reset-progress';
+	const localStorageKey = $derived(
+		`${data.bbox.coordinates.minX}.${data.bbox.coordinates.minY}.${data.bbox.coordinates.maxX}.${data.bbox.coordinates.maxY}`
+	);
 
 	let map: MapboxMap;
 	let ref: HTMLDivElement;
 
+	const numberFormat = Intl.NumberFormat('en-US', {
+		maximumFractionDigits: 0
+	});
+
 	// eslint-disable-next-line svelte/no-unnecessary-state-wrap
 	let linearIds: SvelteSet<string> = $state(new SvelteSet());
+
+	const identifiedFeatures = $derived(
+		data.features.filter((d) => linearIds.has(d.properties.LINEARID))
+	);
+
+	const identifiedStreets = $derived(
+		Array.from(new Set(identifiedFeatures.map((d) => d.properties.FULLNAME))).sort(ascending)
+	);
+
+	const identifiedMiles = $derived(
+		identifiedFeatures
+			.map((d) => length(d, { units: 'miles' }))
+			.reduce((prev, curr) => prev + curr, 0)
+	);
 
 	const updateFeatureState = () => {
 		for (const id of linearIds) {
@@ -32,12 +57,26 @@
 	};
 
 	onMount(() => {
+		const localObjectIds = localStorage.getItem(localStorageKey);
+		if (localObjectIds !== null) {
+			let json: Array<string> = [];
+			try {
+				json = JSON.parse(localObjectIds);
+			} catch (e) {
+				console.error(e);
+			}
+
+			if (Array.isArray(json)) {
+				linearIds = new SvelteSet(json);
+			}
+		}
+
 		map = new MapboxMap({
 			container: ref,
 			accessToken: PUBLIC_MAPBOX_TOKEN,
 			bounds: [
-				[data.bbox.minX, data.bbox.minY],
-				[data.bbox.maxX, data.bbox.maxY]
+				[data.bbox.coordinates.minX, data.bbox.coordinates.minY],
+				[data.bbox.coordinates.maxX, data.bbox.coordinates.maxY]
 			],
 			minZoom: 9,
 			dragRotate: false,
@@ -72,6 +111,21 @@
 				})
 			} as const;
 
+			map.addSource('source-bbox', {
+				type: 'geojson',
+				data: data.bbox.polygon
+			});
+
+			map.addLayer({
+				id: 'layer-bbox',
+				type: 'line',
+				source: 'source-bbox',
+				paint: {
+					'line-color': '#000',
+					'line-width': 3
+				}
+			});
+
 			map.addSource('source-features', {
 				type: 'geojson',
 				data: features
@@ -100,7 +154,29 @@
 					]
 				}
 			});
+
+			if (linearIds.size > 0) {
+				map.on('sourcedata', (e) => {
+					if (e.sourceId === 'source-features' && e.isSourceLoaded) {
+						updateFeatureState();
+					}
+				});
+			}
 		});
+
+		map.on('move', () => {
+			if (linearIds.size > 0) {
+				updateFeatureState();
+			}
+		});
+
+		return () => {
+			map.remove();
+		};
+	});
+
+	$effect(() => {
+		localStorage.setItem(localStorageKey, JSON.stringify(Array.from(linearIds)));
 	});
 </script>
 
@@ -157,7 +233,7 @@
 			</form>
 		</div>
 
-		<!-- <div style="display: grid; gap: calc(var(--gap) / 2);">
+		<div style="display: grid; gap: calc(var(--gap) / 2);">
 			<details>
 				<summary>
 					<p style="color: var(--color-primary);">
@@ -167,44 +243,20 @@
 							>
 						{/key}
 						of
-						<span class="number">{numberFormat.format(metadata.mileLength)}</span>
+						<span class="number">{numberFormat.format(data.mileLength)}</span>
 						miles
 						{#key identifiedMiles}
 							<span class="parenthesis" class:update={identifiedMiles > 0}
-								>(<span class="number"
-									>{Math.round((identifiedMiles / metadata.mileLength) * 100)}</span
+								>(<span class="number">{Math.round((identifiedMiles / data.mileLength) * 100)}</span
 								>%)</span
 							>
 						{/key}
 						identified
 					</p>
 				</summary>
-				<ul>
-					{#each identifiedStreets as [borough, boroughStreets] (borough)}
-						{@const boroughLength = boroughLengths.get(borough) ?? 0}
-						<li>
-							<details>
-								<summary
-									>{#key boroughStreets.length}
-										<p style="display: inline;" class="update">
-											<span class="borough">{borough}</span>
-											<span class="parenthesis">
-												(<span class="number"
-													>{Math.round(
-														(boroughLength / metadata.boroughLengths[borough]) * 100
-													)}%</span
-												>)
-											</span>
-										</p>
-									{/key}
-								</summary>
-								<ul class="streets">
-									{#each boroughStreets as street (street)}
-										<li class="street update">{street}</li>
-									{/each}
-								</ul>
-							</details>
-						</li>
+				<ul class="streets">
+					{#each identifiedStreets as street (street)}
+						<li class="street update">{street}</li>
 					{/each}
 				</ul>
 			</details>
@@ -218,21 +270,26 @@
 						<p><small>Made by <a href="https://erxclau.me" id="byline">Eric Lau</a>.</small></p>
 						<p>
 							<small>
-								This page uses a modified version of
-								<a href="https://www.nyc.gov/content/planning/pages/resources/datasets/lion">LION</a
+								This page uses the
+								<a
+									href="https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-geodatabase-file.2025.html"
+									>2025 TIGER/Line Roads National Geodatabase</a
 								>
 								<span class="parenthesis"
-									>(<a href="https://hub.arcgis.com/datasets/DCP::lion/about">ArcGIS Hub</a>)</span
+									>(<a
+										href="https://www2.census.gov/geo/pdfs/maps-data/data/tiger/tgrshp2025/2025_TIGERLINE_GDB_Record_Layouts.pdf"
+										>documentation</a
+									>)</span
 								>
-								from New York City’s Department of City Planning. Modifications were made in Mapshaper.
-								Data is loaded using Flatgeobuf. View the source code on
-								<a href="https://github.com/erxclau/nyc-streets">GitHub</a>.</small
+								from the United States Census Bureau. Processed in QGIS. Data is loaded using Flatgeobuf.
+								View the source code on
+								<a href="https://github.com/erxclau/us-streets">GitHub</a>.</small
 							>
 						</p>
 					</div>
 
 					<div>
-						<button command="show-modal" commandfor={modalId} disabled={objectIds.size === 0}
+						<button command="show-modal" commandfor={modalId} disabled={linearIds.size === 0}
 							>Reset progress</button
 						>
 
@@ -248,10 +305,10 @@
 										<form method="dialog">
 											<button
 												onclick={() => {
-													for (const id of objectIds) {
+													for (const id of linearIds) {
 														const featureSelector = {
 															id: id,
-															source: 'source-nyc'
+															source: 'source-features'
 														} as FeatureSelector;
 
 														const highlighted = map.getFeatureState(featureSelector)?.['highlight'];
@@ -262,7 +319,7 @@
 														}
 													}
 
-													objectIds = new SvelteSet();
+													linearIds = new SvelteSet();
 												}}>Confirm</button
 											>
 										</form>
@@ -273,7 +330,7 @@
 					</div>
 				</div>
 			</details>
-		</div> -->
+		</div>
 	</hgroup>
 
 	<figure>
@@ -506,10 +563,6 @@
 	menu {
 		display: flex;
 		gap: 0.5rem;
-	}
-
-	.borough {
-		color: var(--color-primary);
 	}
 
 	li.street {
