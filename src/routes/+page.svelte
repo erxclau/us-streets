@@ -10,6 +10,12 @@
 	import { PUBLIC_MAPBOX_TOKEN } from '$env/static/public';
 
 	let { data } = $props();
+	// const dataFeatures = $derived(await data.features);
+	const mileLength = $derived(
+		(await data.features)
+			.map((f) => length(f, { units: 'miles' }))
+			.reduce((prev, curr) => prev + curr, 0)
+	);
 
 	const modalId = 'confirm-reset-progress';
 	const localStorageKey = $derived(
@@ -17,7 +23,6 @@
 	);
 
 	let map: MapboxMap;
-	let ref: HTMLDivElement;
 
 	const numberFormat = Intl.NumberFormat('en-US', {
 		maximumFractionDigits: 0
@@ -27,7 +32,7 @@
 	let linearIds: SvelteSet<string> = $state(new SvelteSet());
 
 	const identifiedFeatures = $derived(
-		data.features.filter((d) => linearIds.has(d.properties.LINEARID))
+		(await data.features).filter((d) => linearIds.has(d.properties.LINEARID))
 	);
 
 	const identifiedStreets = $derived(
@@ -72,7 +77,7 @@
 		}
 
 		map = new MapboxMap({
-			container: ref,
+			container: 'map',
 			accessToken: PUBLIC_MAPBOX_TOKEN,
 			bounds: [
 				[data.bbox.coordinates.minX, data.bbox.coordinates.minY],
@@ -94,23 +99,6 @@
 		map.touchZoomRotate.disableRotation();
 
 		map.on('load', () => {
-			const features = {
-				type: 'FeatureCollection',
-				features: data.features.map((f) => {
-					return {
-						type: f.type,
-						id: f.properties.LINEARID,
-						geometry: {
-							type: f.geometry.type,
-							coordinates: f.geometry.coordinates.map((x) =>
-								x.map((y) => y.map((z) => +z.toPrecision(8)))
-							)
-						},
-						properties: {}
-					};
-				})
-			} as const;
-
 			map.addSource('source-bbox', {
 				type: 'geojson',
 				data: data.bbox.polygon
@@ -126,42 +114,61 @@
 				}
 			});
 
-			map.addSource('source-features', {
-				type: 'geojson',
-				data: features
-			});
+			data.features.then((d) => {
+				const features = {
+					type: 'FeatureCollection',
+					features: d.map((f) => {
+						return {
+							type: f.type,
+							id: f.properties.LINEARID,
+							geometry: {
+								type: f.geometry.type,
+								coordinates: f.geometry.coordinates.map((x) =>
+									x.map((y) => y.map((z) => +z.toPrecision(8)))
+								)
+							},
+							properties: {}
+						};
+					})
+				} as const;
 
-			map.addLayer({
-				id: 'layer-features',
-				source: 'source-features',
-				type: 'line',
-				paint: {
-					'line-color': [
-						'case',
-						['boolean', ['feature-state', 'highlight'], false],
-						'#0f59d7',
-						'#0444a1'
-					],
-					'line-opacity': ['case', ['boolean', ['feature-state', 'highlight'], false], 1, 0.125],
-					'line-width': [
-						'interpolate',
-						['linear'],
-						['zoom'],
-						11,
-						['case', ['boolean', ['feature-state', 'highlight'], false], 1.25, 0.5],
-						12.5,
-						['case', ['boolean', ['feature-state', 'highlight'], false], 3, 0.5]
-					]
-				}
-			});
+				map.addSource('source-features', {
+					type: 'geojson',
+					data: features
+				});
 
-			if (linearIds.size > 0) {
-				map.on('sourcedata', (e) => {
-					if (e.sourceId === 'source-features' && e.isSourceLoaded) {
-						updateFeatureState();
+				map.addLayer({
+					id: 'layer-features',
+					source: 'source-features',
+					type: 'line',
+					paint: {
+						'line-color': [
+							'case',
+							['boolean', ['feature-state', 'highlight'], false],
+							'#0f59d7',
+							'#0444a1'
+						],
+						'line-opacity': ['case', ['boolean', ['feature-state', 'highlight'], false], 1, 0.125],
+						'line-width': [
+							'interpolate',
+							['linear'],
+							['zoom'],
+							11,
+							['case', ['boolean', ['feature-state', 'highlight'], false], 1.25, 0.5],
+							12.5,
+							['case', ['boolean', ['feature-state', 'highlight'], false], 3, 0.5]
+						]
 					}
 				});
-			}
+
+				if (linearIds.size > 0) {
+					map.on('sourcedata', (e) => {
+						if (e.sourceId === 'source-features' && e.isSourceLoaded) {
+							updateFeatureState();
+						}
+					});
+				}
+			});
 		});
 
 		map.on('move', () => {
@@ -201,7 +208,7 @@
 
 					const attempt = attemptData.toString().toLowerCase().trim();
 
-					const identifiedFeatures = data.features.filter((d) => {
+					const identifiedFeatures = (await data.features).filter((d) => {
 						const street = d.properties.FULLNAME.toLowerCase();
 						return street === attempt;
 					});
@@ -243,11 +250,11 @@
 							>
 						{/key}
 						of
-						<span class="number">{numberFormat.format(data.mileLength)}</span>
+						<span class="number">{numberFormat.format(mileLength)}</span>
 						miles
 						{#key identifiedMiles}
 							<span class="parenthesis" class:update={identifiedMiles > 0}
-								>(<span class="number">{Math.round((identifiedMiles / data.mileLength) * 100)}</span
+								>(<span class="number">{Math.round((identifiedMiles / mileLength) * 100)}</span
 								>%)</span
 							>
 						{/key}
@@ -334,7 +341,7 @@
 	</hgroup>
 
 	<figure>
-		<div id="map" bind:this={ref}></div>
+		<div id="map"></div>
 	</figure>
 </main>
 
