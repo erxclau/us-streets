@@ -122,7 +122,7 @@
 				source: 'source-bbox',
 				paint: {
 					'line-color': '#000',
-					"line-width": 3
+					'line-width': 3
 				}
 			});
 
@@ -202,8 +202,7 @@
 					const attempt = attemptData.toString().toLowerCase().trim();
 
 					const identifiedFeatures = data.features.filter((d) => {
-						const street = d.properties.FULLNAME.toLowerCase();
-						return street === attempt;
+						return d.properties.FULLNAME.toLowerCase() === attempt;
 					});
 
 					let oldLinearIdsSize = linearIds.size;
@@ -279,6 +278,19 @@
 									>(<a
 										href="https://www2.census.gov/geo/pdfs/maps-data/data/tiger/tgrshp2025/2025_TIGERLINE_GDB_Record_Layouts.pdf"
 										>documentation</a
+									>
+									and appendices
+									<a
+										href="https://www2.census.gov/geo/pdfs/maps-data/data/tiger/tgrshp2025/TGRSHP2025_TechDoc_B.pdf"
+										>B</a
+									>,
+									<a
+										href="https://www2.census.gov/geo/pdfs/maps-data/data/tiger/tgrshp2025/TGRSHP2025_TechDoc_C.pdf"
+										>C</a
+									>,
+									<a
+										href="https://www2.census.gov/geo/pdfs/maps-data/data/tiger/tgrshp2025/TGRSHP2025_TechDoc_D.pdf"
+										>D</a
 									>)</span
 								>
 								from the United States Census Bureau. Processed in QGIS. Data is loaded using Flatgeobuf.
