@@ -5,10 +5,17 @@ import { dev } from '$app/env';
 import { error } from '@sveltejs/kit';
 import bboxPolygon from '@turf/bbox-polygon';
 import area from '@turf/area';
-import length from '@turf/length';
+// import length from '@turf/length';
 
+// TODO: National Sub-State Geography Geodatabase
+// https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-geodatabase-file.2025.html
+
+// Roads National Geodatabase
 // https://www2.census.gov/geo/pdfs/maps-data/data/tiger/tgrshp2025/2025_TIGERLINE_GDB_Record_Layouts.pdf
-// Page 16: Roads National Geodatabase
+
+// https://www2.census.gov/geo/pdfs/maps-data/data/tiger/tgrshp2025/TGRSHP2025_TechDoc_B.pdf
+// https://www2.census.gov/geo/pdfs/maps-data/data/tiger/tgrshp2025/TGRSHP2025_TechDoc_C.pdf
+// https://www2.census.gov/geo/pdfs/maps-data/data/tiger/tgrshp2025/TGRSHP2025_TechDoc_D.pdf
 
 interface RoadProperties {
 	LINEARID: string; // Linear feature identifier
@@ -69,31 +76,26 @@ export const load: PageLoad = async ({ url }) => {
 		});
 	}
 
-	const features = await Array.fromAsync(fgb);
-
-	if (features.length === 0) {
-		error(400, {
-			message: 'Provided bbox contains no U.S. streets'
-		});
-	}
-
-	if (dev) {
-		if (!features.every((d) => d.geometry.type === 'MultiLineString')) {
-			console.error(features.filter((d) => d.geometry.type !== 'MultiLineString'));
-			error(400, {
-				message: `Features with non-MultiLineString geometry type`
-			});
-		}
-	}
-
 	return {
-		features,
+		features: (async () => {
+			const features = await Array.fromAsync(fgb);
+
+			if (features.length === 0) {
+				throw new Error('Provided bbox contains no U.S. streets');
+			}
+
+			if (dev) {
+				if (!features.every((d) => d.geometry.type === 'MultiLineString')) {
+					console.error(features.filter((d) => d.geometry.type !== 'MultiLineString'));
+					throw new Error('Features with non-MultiLineString geometry type');
+				}
+			}
+
+			return features;
+		})(),
 		bbox: {
 			coordinates: bbox,
 			polygon
-		},
-		mileLength: features
-			.map((f) => length(f, { units: 'miles' }))
-			.reduce((prev, curr) => prev + curr, 0)
+		}
 	};
 };
