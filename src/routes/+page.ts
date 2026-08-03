@@ -6,7 +6,6 @@ import { error } from '@sveltejs/kit';
 import bboxPolygon from '@turf/bbox-polygon';
 import area from '@turf/area';
 import length from '@turf/length';
-import type { IGeoJsonFeature } from 'flatgeobuf';
 
 // https://www2.census.gov/geo/pdfs/maps-data/data/tiger/tgrshp2025/2025_TIGERLINE_GDB_Record_Layouts.pdf
 // Page 16: Roads National Geodatabase
@@ -57,7 +56,7 @@ export const load: PageLoad = async ({ url }) => {
 		});
 	}
 
-	let fgb: AsyncGenerator<IGeoJsonFeature>;
+	let fgb: AsyncGenerator<RoadFeature>;
 
 	try {
 		fgb = deserialize(
