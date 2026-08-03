@@ -1,37 +1,17 @@
-import type { PageLoad } from './$types';
-import type { Feature, MultiLineString } from 'geojson';
-import { deserialize } from 'flatgeobuf/lib/mjs/geojson';
-import { dev } from '$app/env';
 import { error } from '@sveltejs/kit';
+import { dev } from '$app/env';
+import { deserialize } from 'flatgeobuf/lib/mjs/geojson';
 import bboxPolygon from '@turf/bbox-polygon';
+import bboxClip from '@turf/bbox-clip';
 import area from '@turf/area';
-// import length from '@turf/length';
+
+import type { PageLoad } from './$types';
+import type { RoadFeature } from '$lib/tiger';
 
 // TODO: National Sub-State Geography Geodatabase
 // https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-geodatabase-file.2025.html
 
-// Roads National Geodatabase
-// https://www2.census.gov/geo/pdfs/maps-data/data/tiger/tgrshp2025/2025_TIGERLINE_GDB_Record_Layouts.pdf
-
-// https://www2.census.gov/geo/pdfs/maps-data/data/tiger/tgrshp2025/TGRSHP2025_TechDoc_B.pdf
-// https://www2.census.gov/geo/pdfs/maps-data/data/tiger/tgrshp2025/TGRSHP2025_TechDoc_C.pdf
-// https://www2.census.gov/geo/pdfs/maps-data/data/tiger/tgrshp2025/TGRSHP2025_TechDoc_D.pdf
-
-interface RoadProperties {
-	LINEARID: string; // Linear feature identifier
-	FULLNAME: string; // Concatenation of expanded text for prefix qualifier, prefix direction, prefix type, base name, suffix type, suffix direction, and suffix qualifier (as available) with a space between each expanded text field
-	RTTYP: string; // Route type code
-	MTFCC: string; // MAF/TIGER feature class code
-	PREQUAL?: string; // Expanded text for prefix qualifier (as available)
-	PREDIR?: string; // Expanded text for prefix direction (as available)
-	PRETYP?: string; // Expanded text for prefix type (as available)
-	NAME: string; // Base name
-	SUFTYP?: string; // Expanded text for suffix type (as available)
-	SUFDIR?: string; // Expanded text for suffix direction (as available)
-	SUFQUAL?: string; // Expanded text for suffix qualifier (as available)
-}
-
-type RoadFeature = Feature<MultiLineString, RoadProperties>;
+type BBoxCoordinates = [number, number, number, number];
 
 export const ssr = false;
 
@@ -54,7 +34,7 @@ export const load: PageLoad = async ({ url }) => {
 		maxY: coordinates[3]
 	};
 
-	const polygon = bboxPolygon(coordinates as [number, number, number, number]);
+	const polygon = bboxPolygon(coordinates as BBoxCoordinates);
 	const bboxAreaSqKm = area(polygon) / 1_000_000;
 
 	if (bboxAreaSqKm > 3_000) {
@@ -84,14 +64,7 @@ export const load: PageLoad = async ({ url }) => {
 				throw new Error('Provided bbox contains no U.S. streets');
 			}
 
-			if (dev) {
-				if (!features.every((d) => d.geometry.type === 'MultiLineString')) {
-					console.error(features.filter((d) => d.geometry.type !== 'MultiLineString'));
-					throw new Error('Features with non-MultiLineString geometry type');
-				}
-			}
-
-			return features;
+			return features.map((f) => bboxClip(f, coordinates as BBoxCoordinates)) as Array<RoadFeature>;
 		})(),
 		bbox: {
 			coordinates: bbox,

@@ -9,6 +9,7 @@
 
 	import { PUBLIC_MAPBOX_TOKEN } from '$env/static/public';
 	import type { PageData } from '../routes/$types';
+	import { formatFeatureName, matchFeature } from './tiger';
 
 	type Props = Omit<PageData, 'features'> & {
 		features: Awaited<PageData['features']>;
@@ -36,7 +37,7 @@
 	const identifiedFeatures = $derived(features.filter((d) => linearIds.has(d.properties.LINEARID)));
 
 	const identifiedStreets = $derived(
-		Array.from(new Set(identifiedFeatures.map((d) => d.properties.FULLNAME))).sort(ascending)
+		Array.from(new Set(identifiedFeatures.map(formatFeatureName))).sort(ascending)
 	);
 
 	const identifiedMiles = $derived(sum(identifiedFeatures, (d) => length(d, { units: 'miles' })));
@@ -110,26 +111,19 @@
 				}
 			});
 
-			const mapFeatures = {
-				type: 'FeatureCollection',
-				features: features.map((f) => {
-					return {
-						type: f.type,
-						id: f.properties.LINEARID,
-						geometry: {
-							type: f.geometry.type,
-							coordinates: f.geometry.coordinates.map((x) =>
-								x.map((y) => y.map((z) => +z.toPrecision(8)))
-							)
-						},
-						properties: {}
-					};
-				})
-			} as const;
-
 			map.addSource('source-features', {
 				type: 'geojson',
-				data: mapFeatures
+				data: {
+					type: 'FeatureCollection',
+					features: features.map((f) => {
+						return {
+							type: f.type,
+							id: f.properties.LINEARID,
+							geometry: f.geometry,
+							properties: {}
+						};
+					})
+				}
 			});
 
 			map.addLayer({
@@ -201,15 +195,12 @@
 					}
 
 					const attempt = attemptData.toString().toLowerCase().trim();
-
-					const identifiedFeatures = features.filter((d) => {
-						return d.properties.FULLNAME.toLowerCase() === attempt;
-					});
+					const matchedFeatures = features.filter((f) => matchFeature(f, attempt));
 
 					let oldLinearIdsSize = linearIds.size;
 
 					linearIds = new SvelteSet(
-						linearIds.union(new Set(identifiedFeatures.map((d) => d.properties.LINEARID)))
+						linearIds.union(new Set(matchedFeatures.map((d) => d.properties.LINEARID)))
 					);
 
 					if (oldLinearIdsSize !== linearIds.size) {
@@ -581,7 +572,6 @@
 	li.street {
 		color: var(--color-neutral);
 		font-size: 0.875rem;
-		text-transform: capitalize;
 		font-variant-numeric: tabular-nums;
 	}
 
