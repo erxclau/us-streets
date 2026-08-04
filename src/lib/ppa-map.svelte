@@ -179,7 +179,7 @@
 				{@const state = selectedFeature.properties.fips.substring(0, 2)}
 				<a class="button" href={resolve(`/${selectedFeature.properties.fips}`)}
 					>Select {selectedFeature.properties.name}, {stateFips[state as keyof typeof stateFips]
-						.postal}</a
+						.name}</a
 				>
 			{/if}
 		</div>
@@ -253,7 +253,7 @@
 		background-color: var(--color-primary);
 		color: var(--color-secondary);
 		border: none;
-		font-size: 1.25rem;
+		font-size: 1rem;
 		transition:
 			background-color 125ms linear,
 			color 125ms linear,
@@ -261,6 +261,7 @@
 		padding: 0.125rem 0.375rem;
 		text-decoration: none;
 		width: fit-content;
+		text-wrap: pretty;
 	}
 
 	div.button {

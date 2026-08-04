@@ -67,6 +67,7 @@ export const load: PageLoad = async ({ data, params }) => {
 
 			return features
 				.map((f) => {
+					// TODO: consider if there is an advantage to first clipping with bbox
 					const clipped = bboxClip(f, data.bbox) as RoadFeature;
 					return {
 						...clipped,

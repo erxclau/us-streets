@@ -3751,6 +3751,20 @@ function match(
 	return false;
 }
 
+const formatNumberOrdinal = (d: number) => {
+	const ordinal = new Intl.PluralRules('en-US', { type: 'ordinal' });
+	const suffixes = {
+		zero: 'th',
+		one: 'st',
+		two: 'nd',
+		few: 'rd',
+		other: 'th',
+		many: 'th'
+	};
+
+	return `${d}${suffixes[ordinal.select(d)]}`;
+};
+
 export const matchFeature = (f: RoadFeature, attempt: string) => {
 	if (f.properties.FULLNAME.toLowerCase() === attempt) {
 		return true;
@@ -3763,6 +3777,17 @@ export const matchFeature = (f: RoadFeature, attempt: string) => {
 	const prefixType = f.properties.PRETYP === undefined ? undefined : types[f.properties.PRETYP];
 
 	const base = f.properties.NAME;
+
+	let numericalBase: string | undefined = undefined;
+	const numericalMatch = base.match(/^\d+/);
+	if (numericalMatch !== null && numericalMatch.length > 0) {
+		const parsedNumericalMatch = +numericalMatch[0];
+		if (!isNaN(parsedNumericalMatch)) {
+			if (formatNumberOrdinal(parsedNumericalMatch) === base) {
+				numericalBase = String(parsedNumericalMatch);
+			}
+		}
+	}
 
 	const suffixType = f.properties.SUFTYP === undefined ? undefined : types[f.properties.SUFTYP];
 	const suffixDirection =
@@ -3782,8 +3807,7 @@ export const matchFeature = (f: RoadFeature, attempt: string) => {
 			prefixType?.expandedFullText,
 			prefixType?.spanishTranslation
 		],
-		// TODO: if the base is comprised soley of an ordinal number, add an alterate...
-		[base],
+		[base, numericalBase],
 		[
 			suffixType?.displayNameAbbreviation,
 			suffixType?.expandedFullText,

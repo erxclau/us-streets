@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
+	import { resolve } from '$app/paths';
 
 	import { Map as MapboxMap, type FeatureSelector } from 'mapbox-gl/esm';
 	import 'mapbox-gl/dist/mapbox-gl.css';
@@ -12,7 +13,7 @@
 	import { formatFeatureName, matchFeature, type RoadFeature } from './tiger';
 	import Details from './details.svelte';
 	import H1 from './h1.svelte';
-	import { resolve } from '$app/paths';
+	import Input from './input.svelte';
 
 	interface Props {
 		features: Array<RoadFeature>;
@@ -34,12 +35,12 @@
 
 	const totalMiles = $derived(sum(features, (d) => length(d, { units: 'miles' })));
 
-	const modalId = 'confirm-reset-progress';
-	const localStorageKey = $derived(
-		fips === undefined
-			? `${bbox.coordinates.minX}.${bbox.coordinates.minY}.${bbox.coordinates.maxX}.${bbox.coordinates.maxY}`
-			: fips
+	const bboxCoordinates = $derived(
+		`${bbox.coordinates.minX},${bbox.coordinates.minY},${bbox.coordinates.maxX},${bbox.coordinates.maxY}`
 	);
+
+	const modalId = 'confirm-reset-progress';
+	const localStorageKey = $derived(fips === undefined ? bboxCoordinates : fips);
 
 	let map: MapboxMap;
 	let ref: HTMLDivElement;
@@ -195,18 +196,12 @@
 <main>
 	<hgroup>
 		<div id="form">
-			<H1 override={placeName} />
-
-			{#if placeName && usState}
-				<div
-					style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; font-size: 1rem;"
-				>
-					<p style="color: var(--color-neutral); font-size: 1.125rem;">
-						{placeName}, {usState.name}
-					</p>
-					<a href={resolve('/')}>Change place</a>
-				</div>
-			{/if}
+			<div
+				style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; font-size: 1rem; gap: 0.125rem"
+			>
+				<H1 />
+				<a href="{resolve('/')}?from={bboxCoordinates}">Change place</a>
+			</div>
 
 			<form
 				onsubmit={async (e) => {
@@ -243,8 +238,16 @@
 					input.classList.add('shake');
 				}}
 			>
-				<label for="attempt" class="sr-only">Enter a street name</label>
-				<input type="text" name="attempt" id="attempt" placeholder="Enter a street name" />
+				{#if placeName !== undefined && usState !== undefined}
+					<Input
+						place={{
+							name: placeName,
+							state: usState
+						}}
+					/>
+				{:else}
+					<Input />
+				{/if}
 			</form>
 		</div>
 
@@ -457,9 +460,6 @@
 
 	p {
 		margin: 0;
-	}
-
-	p {
 		font-family: var(--font-sans);
 		font-size: 1rem;
 		color: var(--color-neutral);
@@ -471,6 +471,7 @@
 		text-underline-offset: 3px;
 		font-family: var(--font-sans);
 		transition: color 125ms linear;
+		font-size: 0.925rem;
 	}
 
 	a:hover,
@@ -482,22 +483,6 @@
 	form {
 		display: grid;
 		gap: 0.25rem;
-	}
-
-	label {
-		font-family: var(--font-sans);
-		color: var(--color-neutral);
-		font-size: 0.875rem;
-	}
-
-	input {
-		background-color: var(--color-primary);
-		border: none;
-		color: var(--color-secondary);
-		font-family: var(--font-sans);
-		font-size: 1.25rem;
-		padding: 0.25rem;
-		border-radius: 0.25rem;
 	}
 
 	figure {
@@ -566,18 +551,6 @@
 		display: inline-block;
 		padding-left: 0.125rem;
 		padding-right: 0.125rem;
-	}
-
-	.sr-only {
-		position: absolute;
-		width: 1px;
-		height: 1px;
-		padding: 0;
-		margin: -1px;
-		overflow: hidden;
-		clip: rect(0, 0, 0, 0);
-		white-space: nowrap;
-		border: 0;
 	}
 
 	@keyframes shake {

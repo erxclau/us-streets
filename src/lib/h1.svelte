@@ -1,23 +1,7 @@
-<script lang="ts">
-	interface Props {
-		override?: string;
-	}
-
-	let { override }: Props = $props();
-</script>
-
 <h1>
-	Name {#if override}
-		{#each override as character, i (character + i)}
-			{#if character.toLowerCase() === 's'}
-				<span class="non-wonk">{character}</span>
-			{:else}
-				{character}
-			{/if}
-		{/each}
-	{:else}
-		U.<span class="non-wonk">S</span>.
-	{/if} <span class="non-wonk">s</span>treet<span class="non-wonk">s</span>
+	Name U.<span class="non-wonk">S</span>. <span class="non-wonk">s</span>treet<span class="non-wonk"
+		>s</span
+	>
 </h1>
 
 <style>
