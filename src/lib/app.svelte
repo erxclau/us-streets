@@ -293,6 +293,11 @@
 						return;
 					}
 
+					const input = e.currentTarget.querySelector('input');
+					if (!input) {
+						return;
+					}
+
 					if ((requireDirection || requireDirection === undefined) && requireDirectionToast) {
 						const matchDirectionlessFeatures = features.filter((f) =>
 							matchFeature(f, attempt, {
@@ -301,20 +306,15 @@
 						);
 
 						if (matchDirectionlessFeatures.length > 0) {
-							toast(
-								'Street directions are required. You can turn off the requirement in the settings.',
-								{
-									duration: Number.POSITIVE_INFINITY
-								}
-							);
+							const message =
+								'Street directions are required. You can turn off the requirement in the settings.';
+
+							toast(message, {
+								duration: Number.POSITIVE_INFINITY
+							});
 
 							requireDirectionToast = false;
 						}
-					}
-
-					const input = e.currentTarget.querySelector('input');
-					if (!input) {
-						return;
 					}
 
 					input.classList.remove('shake');
@@ -431,12 +431,12 @@
 	<figure>
 		<div id="map" bind:this={ref}></div>
 	</figure>
-	<div class="desktop-toaster">
-		<Toaster position="bottom-right" closeButton {toastOptions} />
-	</div>
 
 	<div class="mobile-toaster">
-		<Toaster position="top-center" closeButton {toastOptions} />
+		<Toaster position="bottom-center" closeButton {toastOptions} />
+	</div>
+	<div class="desktop-toaster">
+		<Toaster position="bottom-right" closeButton {toastOptions} />
 	</div>
 </main>
 
