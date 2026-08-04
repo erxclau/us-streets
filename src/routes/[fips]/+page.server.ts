@@ -1,13 +1,15 @@
 import type { PageServerLoad } from './$types';
 import { error } from '@sveltejs/kit';
-
-// import ppa from '$lib/data/ppa.json';
+import { read } from '$app/server';
 import { csvParse } from 'd3-dsv';
+
 import stateFips from '$lib/data/fips';
-import ppaCsv from '$lib/data/ppa.csv?raw';
+import ppaUrl from '$lib/data/ppa.csv?url';
 
 export const load: PageServerLoad = async ({ params }) => {
 	const state = params.fips.substring(0, 2);
+
+	const ppaCsv = await read(ppaUrl).text();
 	const ppaOptions = csvParse<'fips' | 'name' | 'minLon' | 'minLat' | 'maxLon' | 'maxLat'>(
 		ppaCsv
 	).map((d) => {
