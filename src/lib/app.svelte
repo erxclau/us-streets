@@ -281,6 +281,16 @@
 						})
 					);
 
+					if (requireDirection === false) {
+						const matchedDirectionFeatures = features.filter((f) =>
+							matchFeature(f, attempt, {
+								requireDirection: true
+							})
+						);
+
+						matchedFeatures.push(...matchedDirectionFeatures);
+					}
+
 					let oldLinearIdsSize = linearIds.size;
 
 					linearIds = new SvelteSet(
