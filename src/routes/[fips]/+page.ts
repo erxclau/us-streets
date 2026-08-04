@@ -6,6 +6,7 @@ import type { PageLoad } from './$types';
 import type { RoadFeature } from '$lib/tiger';
 import type { PPAFeature } from '$lib/data/ppa';
 import bboxClip from '@turf/bbox-clip';
+import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 
 export const ssr = false;
 
@@ -64,8 +65,29 @@ export const load: PageLoad = async ({ data, params }) => {
 				throw new Error('Provided bbox contains no U.S. streets');
 			}
 
-			// TODO: clip to ppa bounds
-			return features.map((f) => bboxClip(f, data.bbox)) as Array<RoadFeature>;
+			return features
+				.map((f) => {
+					const clipped = bboxClip(f, data.bbox) as RoadFeature;
+					return {
+						...clipped,
+						geometry: {
+							...clipped.geometry,
+							coordinates:
+								clipped.geometry.type === 'LineString'
+									? clipped.geometry.coordinates
+											.map((p) => (booleanPointInPolygon(p, ppa) ? p : null))
+											.filter((p) => p !== null)
+									: clipped.geometry.coordinates
+											.map((positions) =>
+												positions
+													.map((p) => (booleanPointInPolygon(p, ppa) ? p : null))
+													.filter((p) => p !== null)
+											)
+											.filter((positions) => positions.length > 0)
+						}
+					};
+				})
+				.filter((f) => f.geometry.coordinates.length > 0) as Array<RoadFeature>;
 		})(),
 		bbox: {
 			coordinates,

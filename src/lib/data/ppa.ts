@@ -1,4 +1,4 @@
-import type { Feature, Geometry } from 'geojson';
+import type { Feature, MultiPolygon, Polygon } from 'geojson';
 import ppa from './ppa.json';
 
 export default ppa as Array<{
@@ -12,4 +12,4 @@ export interface PPAProperties {
 	fips: string;
 }
 
-export type PPAFeature = Feature<Geometry, PPAProperties>;
+export type PPAFeature = Feature<Polygon | MultiPolygon, PPAProperties>;
