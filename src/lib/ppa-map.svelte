@@ -26,6 +26,7 @@
 	let { location }: Props = $props();
 	let ref: HTMLDivElement;
 	let selectedFeature = $state<PPAFeature | undefined>(undefined);
+	let showZoomHint = $state(false);
 
 	onMount(() => {
 		const map = new MapboxMap({
@@ -57,6 +58,8 @@
 			}
 
 			const zoom = map.getZoom();
+			showZoomHint = zoom < zoomThreshold;
+
 			const bounds = map.getBounds();
 			if (bounds === null || zoom < zoomThreshold) {
 				return;
@@ -173,15 +176,21 @@
 		<div id="form">
 			<H1 />
 
-			{#if selectedFeature === undefined}
-				<div class="button">Select a place</div>
-			{:else}
-				{@const state = selectedFeature.properties.fips.substring(0, 2)}
-				<a class="button" href={resolve(`/${selectedFeature.properties.fips}`)}
-					>Select {selectedFeature.properties.name}, {stateFips[state as keyof typeof stateFips]
-						.name}</a
-				>
-			{/if}
+			<div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
+				{#if selectedFeature === undefined}
+					<div class="button">Select a place</div>
+				{:else}
+					{@const state = selectedFeature.properties.fips.substring(0, 2)}
+					<a class="button" href={resolve(`/${selectedFeature.properties.fips}`)}
+						>Select {selectedFeature.properties.name}, {stateFips[state as keyof typeof stateFips]
+							.name}</a
+					>
+				{/if}
+
+				{#if showZoomHint}
+					<p>Zoom in to show places</p>
+				{/if}
+			</div>
 		</div>
 
 		<div style="display: grid; gap: calc(var(--gap) / 2);">
@@ -317,25 +326,13 @@
 		gap: 0.125rem;
 	}
 
-	/* p {
+	p {
 		margin: 0;
-	} */
-
-	/* p {
 		font-family: var(--font-sans);
 		font-size: 1rem;
 		color: var(--color-neutral);
 		text-wrap: pretty;
 	}
-
-	a {
-		color: var(--color-primary);
-		text-underline-offset: 3px;
-	}
-
-	#byline {
-		color: var(--color-primary);
-	} */
 
 	figure {
 		margin: 0;
@@ -349,14 +346,4 @@
 		width: 100%;
 		height: 100%;
 	}
-
-	/* .number {
-		font-variant-numeric: tabular-nums;
-	}
-
-	.parenthesis {
-		display: inline-block;
-		padding-left: 0.125rem;
-		padding-right: 0.125rem;
-	} */
 </style>
