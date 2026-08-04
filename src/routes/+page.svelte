@@ -7,6 +7,10 @@
 	let { data } = $props();
 </script>
 
+<svelte:head>
+	<title>Name U.S. streets</title>
+</svelte:head>
+
 {#if data.features === null}
 	<PPAMap location={data.location} />
 {:else}

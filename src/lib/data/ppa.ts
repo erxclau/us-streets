@@ -1,3 +1,4 @@
+import type { Feature, Geometry } from 'geojson';
 import ppa from './ppa.json';
 
 export default ppa as Array<{
@@ -5,3 +6,10 @@ export default ppa as Array<{
 	name: string;
 	bbox: [number, number, number, number];
 }>;
+
+export interface PPAProperties {
+	name: string;
+	fips: string;
+}
+
+export type PPAFeature = Feature<Geometry, PPAProperties>;

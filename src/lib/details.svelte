@@ -43,6 +43,7 @@
 		font-size: 1rem;
 		color: var(--color-neutral);
 		text-wrap: pretty;
+		margin: 0;
 	}
 
 	a {

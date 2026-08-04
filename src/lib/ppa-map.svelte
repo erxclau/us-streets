@@ -1,18 +1,18 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { dev } from '$app/env';
+	import { resolve } from '$app/paths';
 	import { PUBLIC_MAPBOX_TOKEN } from '$env/static/public';
 
 	import { type FeatureSelector, type GeoJSONSource, Map as MapboxMap } from 'mapbox-gl/esm';
 	import 'mapbox-gl/dist/mapbox-gl.css';
 	import { deserialize } from 'flatgeobuf/lib/mjs/geojson';
-	import type { Feature, Geometry } from 'geojson';
 
 	import { minUsLat, maxUsLon, minUsLon, maxUsLat } from '$lib/data/us-bbox';
 	import stateFips from '$lib/data/fips';
 	import Details from './details.svelte';
 	import H1 from './h1.svelte';
-	import { resolve } from '$app/paths';
+	import type { PPAFeature } from './data/ppa';
 
 	const zoomThreshold = 8;
 
@@ -26,13 +26,6 @@
 	let { location }: Props = $props();
 	let ref: HTMLDivElement;
 	let selectedFeature = $state<PPAFeature | undefined>(undefined);
-
-	interface PPAProperties {
-		name: string;
-		fips: string;
-	}
-
-	type PPAFeature = Feature<Geometry, PPAProperties>;
 
 	onMount(() => {
 		const map = new MapboxMap({

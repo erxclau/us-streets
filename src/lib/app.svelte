@@ -4,7 +4,7 @@
 
 	import { Map as MapboxMap, type FeatureSelector } from 'mapbox-gl/esm';
 	import 'mapbox-gl/dist/mapbox-gl.css';
-	import type { Feature, GeoJsonProperties, Polygon } from 'geojson';
+	import type { Feature, GeoJsonProperties, Geometry } from 'geojson';
 	import length from '@turf/length';
 	import { ascending, sum } from 'd3-array';
 
@@ -12,6 +12,7 @@
 	import { formatFeatureName, matchFeature, type RoadFeature } from './tiger';
 	import Details from './details.svelte';
 	import H1 from './h1.svelte';
+	import { resolve } from '$app/paths';
 
 	interface Props {
 		features: Array<RoadFeature>;
@@ -22,17 +23,22 @@
 				maxX: number;
 				maxY: number;
 			};
-			polygon: Feature<Polygon, GeoJsonProperties>;
+			polygon: Feature<Geometry, GeoJsonProperties>;
 		};
+		name?: string;
+		state?: { name: string; postal: string };
+		fips?: string;
 	}
 
-	let { bbox, features }: Props = $props();
+	let { bbox, features, name: placeName, state: usState, fips }: Props = $props();
 
 	const totalMiles = $derived(sum(features, (d) => length(d, { units: 'miles' })));
 
 	const modalId = 'confirm-reset-progress';
 	const localStorageKey = $derived(
-		`${bbox.coordinates.minX}.${bbox.coordinates.minY}.${bbox.coordinates.maxX}.${bbox.coordinates.maxY}`
+		fips === undefined
+			? `${bbox.coordinates.minX}.${bbox.coordinates.minY}.${bbox.coordinates.maxX}.${bbox.coordinates.maxY}`
+			: fips
 	);
 
 	let map: MapboxMap;
@@ -118,7 +124,7 @@
 				source: 'source-bbox',
 				paint: {
 					'line-color': '#000',
-					'line-width': 3
+					'line-width': 1.25
 				}
 			});
 
@@ -189,7 +195,18 @@
 <main>
 	<hgroup>
 		<div id="form">
-			<H1 />
+			<H1 override={placeName} />
+
+			{#if placeName && usState}
+				<div
+					style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; font-size: 1rem;"
+				>
+					<p style="color: var(--color-neutral); font-size: 1.125rem;">
+						{placeName}, {usState.name}
+					</p>
+					<a href={resolve('/')}>Change place</a>
+				</div>
+			{/if}
 
 			<form
 				onsubmit={async (e) => {
@@ -449,14 +466,18 @@
 		text-wrap: pretty;
 	}
 
-	/* a {
-		color: var(--color-primary);
+	a {
+		color: var(--color-neutral);
 		text-underline-offset: 3px;
-	} */
+		font-family: var(--font-sans);
+		transition: color 125ms linear;
+	}
 
-	/* #byline {
+	a:hover,
+	a:focus,
+	a:active {
 		color: var(--color-primary);
-	} */
+	}
 
 	form {
 		display: grid;
