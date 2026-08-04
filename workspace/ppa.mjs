@@ -3,7 +3,6 @@
 import { deserialize } from 'flatgeobuf/lib/mjs/geojson.js';
 import { readFileSync, writeFileSync } from 'fs';
 import { bbox as turfBBox } from '@turf/bbox';
-import { csvFormat } from 'd3-dsv';
 
 const data = readFileSync('./workspace/ppa.fgb');
 const view = new Uint8Array(data.buffer);
@@ -15,11 +14,8 @@ for await (const feature of fgb) {
 	mapping.push({
 		fips: feature.properties.fips,
 		name: feature.properties.name,
-		minLon,
-		minLat,
-		maxLon,
-		maxLat
+		bbox: [minLon, minLat, maxLon, maxLat]
 	});
 }
 
-writeFileSync('./workspace/ppa.csv', csvFormat(mapping));
+writeFileSync('./workspace/ppa.json', JSON.stringify(mapping));

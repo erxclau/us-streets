@@ -21,7 +21,6 @@
     "@sveltejs/kit": "^2.57.0",
     "@sveltejs/vite-plugin-svelte": "^7.0.0",
     "@types/d3-array": "^3.2.2",
-    "@types/d3-dsv": "^3.0.7",
     "@types/node": "^24.13.3",
     "eslint": "^10.4.0",
     "eslint-config-prettier": "^10.1.8",
@@ -46,7 +45,6 @@
     "@turf/length": "^7.3.5",
     "@types/geojson": "^7946.0.16",
     "d3-array": "^3.2.4",
-    "d3-dsv": "^3.0.1",
     "flatgeobuf": "^4.4.0",
     "mapbox-gl": "^3.27.0"
   }
