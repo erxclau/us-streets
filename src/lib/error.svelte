@@ -1,4 +1,6 @@
 <script lang="ts">
+	import H1 from './h1.svelte';
+
 	interface Props {
 		error: string;
 		message?: string;
@@ -8,11 +10,7 @@
 </script>
 
 <main>
-	<h1>
-		Name U.<span class="non-wonk">S</span>. <span class="non-wonk">s</span>treet<span
-			class="non-wonk">s</span
-		>
-	</h1>
+	<H1 />
 
 	<div>
 		<p style="font-weight: bold; font-size: 2rem;">{error}</p>
@@ -36,20 +34,6 @@
 		box-sizing: border-box;
 	}
 
-	h1 {
-		font-family: var(--font-headline);
-		color: var(--color-headline);
-		font-size: calc(1rem + 0.875vw);
-		font-weight: 300;
-		text-wrap: pretty;
-		line-height: calc(1rem + 0.875vw);
-	}
-
-	.non-wonk {
-		font-variation-settings: 'WONK' 0;
-	}
-
-	h1,
 	p {
 		margin: 0;
 	}

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import App from '$lib/app.svelte';
+	import PPAMap from '$lib/ppa-map.svelte';
 	import AppError from '$lib/error.svelte';
 	import Spinner from '$lib/spinner.svelte';
 
@@ -7,7 +8,7 @@
 </script>
 
 {#if data.features === null}
-	{data.location.longitude} {data.location.latitude}
+	<PPAMap location={data.location} />
 {:else}
 	{#await data.features}
 		<main>

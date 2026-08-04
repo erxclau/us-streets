@@ -1,8 +1,5 @@
 import type { PageServerLoad } from './$types';
-
-const [minUsLon, minUsLat, maxUsLon, maxUsLat] = [
-	-171.791110603, 18.91619, -66.96466, 71.3577635769
-];
+import { minUsLat, maxUsLon, minUsLon, maxUsLat } from '$lib/data/us-bbox';
 
 const defaultLongLat = {
 	longitude: -74.006058,

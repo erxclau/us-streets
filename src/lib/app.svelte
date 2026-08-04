@@ -10,6 +10,8 @@
 
 	import { PUBLIC_MAPBOX_TOKEN } from '$env/static/public';
 	import { formatFeatureName, matchFeature, type RoadFeature } from './tiger';
+	import Details from './details.svelte';
+	import H1 from './h1.svelte';
 
 	interface Props {
 		features: Array<RoadFeature>;
@@ -187,11 +189,7 @@
 <main>
 	<hgroup>
 		<div id="form">
-			<h1>
-				Name U.<span class="non-wonk">S</span>. <span class="non-wonk">s</span>treet<span
-					class="non-wonk">s</span
-				>
-			</h1>
+			<H1 />
 
 			<form
 				onsubmit={async (e) => {
@@ -266,45 +264,7 @@
 					><span style="font-size: 0.925rem;">Settings and details</span></summary
 				>
 				<div style="padding-left: 0.625rem; display: grid; gap: 0.375rem;">
-					<div>
-						<p><small>Made by <a href="https://erxclau.me" id="byline">Eric Lau</a>.</small></p>
-						<p>
-							<small>
-								This page uses the
-								<a
-									href="https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-geodatabase-file.2025.html"
-									>2025 TIGER/Line Roads National Geodatabase</a
-								>
-								<span class="parenthesis"
-									>(<a
-										href="https://www2.census.gov/geo/pdfs/maps-data/data/tiger/tgrshp2025/2025_TIGERLINE_GDB_Record_Layouts.pdf"
-										>documentation</a
-									>
-									and appendices
-									<a
-										href="https://www2.census.gov/geo/pdfs/maps-data/data/tiger/tgrshp2025/TGRSHP2025_TechDoc_B.pdf"
-										>B</a
-									>,
-									<a
-										href="https://www2.census.gov/geo/pdfs/maps-data/data/tiger/tgrshp2025/TGRSHP2025_TechDoc_C.pdf"
-										>C</a
-									>,
-									<a
-										href="https://www2.census.gov/geo/pdfs/maps-data/data/tiger/tgrshp2025/TGRSHP2025_TechDoc_D.pdf"
-										>D</a
-									>)</span
-								>
-								and
-								<a
-									href="https://hub.arcgis.com/datasets/esri::usa-census-populated-place-areas-1/about"
-									>Populated Place Areas</a
-								>
-								from the United States Census Bureau. Processed in QGIS and Mapshaper. Data is loaded
-								using Flatgeobuf. View the source code on
-								<a href="https://github.com/erxclau/us-streets">GitHub</a>.</small
-							>
-						</p>
-					</div>
+					<Details />
 
 					<div>
 						<button command="show-modal" commandfor={modalId} disabled={linearIds.size === 0}
@@ -478,20 +438,6 @@
 		gap: 0.125rem;
 	}
 
-	h1 {
-		font-family: var(--font-headline);
-		color: var(--color-headline);
-		font-size: calc(1rem + 0.875vw);
-		font-weight: 300;
-		text-wrap: pretty;
-		line-height: calc(1rem + 0.875vw);
-	}
-
-	.non-wonk {
-		font-variation-settings: 'WONK' 0;
-	}
-
-	h1,
 	p {
 		margin: 0;
 	}
@@ -503,14 +449,14 @@
 		text-wrap: pretty;
 	}
 
-	a {
+	/* a {
 		color: var(--color-primary);
 		text-underline-offset: 3px;
-	}
+	} */
 
-	#byline {
+	/* #byline {
 		color: var(--color-primary);
-	}
+	} */
 
 	form {
 		display: grid;
