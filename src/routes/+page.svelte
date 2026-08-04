@@ -6,18 +6,22 @@
 	let { data } = $props();
 </script>
 
-{#await data.features}
-	<main>
-		<div style="display: flex; gap: 0.75rem; align-items: center;">
-			<Spinner />
-			<div>Loading map...</div>
-		</div>
-	</main>
-{:then features}
-	<App {features} bbox={data.bbox} />
-{:catch err: Error}
-	<AppError error={err.name} message={err.message} />
-{/await}
+{#if data.features === null}
+	{data.location.longitude} {data.location.latitude}
+{:else}
+	{#await data.features}
+		<main>
+			<div style="display: flex; gap: 0.75rem; align-items: center;">
+				<Spinner />
+				<div>Loading map...</div>
+			</div>
+		</main>
+	{:then features}
+		<App {features} bbox={data.bbox} />
+	{:catch err: Error}
+		<AppError error={err.name} message={err.message} />
+	{/await}
+{/if}
 
 <style>
 	main {

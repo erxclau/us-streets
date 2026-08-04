@@ -8,17 +8,20 @@ import area from '@turf/area';
 import type { PageLoad } from './$types';
 import type { RoadFeature } from '$lib/tiger';
 
-// TODO: National Sub-State Geography Geodatabase
-// https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-geodatabase-file.2025.html
-
 type BBoxCoordinates = [number, number, number, number];
 
 export const ssr = false;
 
-export const load: PageLoad = async ({ url }) => {
-	const bboxParam =
-		url.searchParams.get('bbox') ??
-		'-74.25495722091921,40.49787772944257,-73.70000924119739,40.91510284353152';
+export const load: PageLoad = async ({ data, url }) => {
+	const bboxParam = url.searchParams.get('bbox');
+	if (bboxParam === null) {
+		return {
+			features: null,
+			bbox: null,
+			location: data.location
+		};
+	}
+
 	const coordinates = bboxParam.split(',').map((d) => Number(d));
 
 	if (coordinates.length !== 4 || coordinates.some((d) => isNaN(d))) {
@@ -37,9 +40,9 @@ export const load: PageLoad = async ({ url }) => {
 	const polygon = bboxPolygon(coordinates as BBoxCoordinates);
 	const bboxAreaSqKm = area(polygon) / 1_000_000;
 
-	if (bboxAreaSqKm > 3_000) {
+	if (bboxAreaSqKm > 3500) {
 		error(400, {
-			message: 'Provided bbox is larger than 3000 sq km'
+			message: 'Provided bbox is larger than 3500 sq km'
 		});
 	}
 

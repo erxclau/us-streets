@@ -4,16 +4,25 @@
 
 	import { Map as MapboxMap, type FeatureSelector } from 'mapbox-gl/esm';
 	import 'mapbox-gl/dist/mapbox-gl.css';
+	import type { Feature, GeoJsonProperties, Polygon } from 'geojson';
 	import length from '@turf/length';
 	import { ascending, sum } from 'd3-array';
 
 	import { PUBLIC_MAPBOX_TOKEN } from '$env/static/public';
-	import type { PageData } from '../routes/$types';
-	import { formatFeatureName, matchFeature } from './tiger';
+	import { formatFeatureName, matchFeature, type RoadFeature } from './tiger';
 
-	type Props = Omit<PageData, 'features'> & {
-		features: Awaited<PageData['features']>;
-	};
+	interface Props {
+		features: Array<RoadFeature>;
+		bbox: {
+			coordinates: {
+				minX: number;
+				minY: number;
+				maxX: number;
+				maxY: number;
+			};
+			polygon: Feature<Polygon, GeoJsonProperties>;
+		};
+	}
 
 	let { bbox, features }: Props = $props();
 
@@ -285,8 +294,13 @@
 										>D</a
 									>)</span
 								>
-								from the United States Census Bureau. Processed in QGIS. Data is loaded using Flatgeobuf.
-								View the source code on
+								and
+								<a
+									href="https://hub.arcgis.com/datasets/esri::usa-census-populated-place-areas-1/about"
+									>Populated Place Areas</a
+								>
+								from the United States Census Bureau. Processed in QGIS and Mapshaper. Data is loaded
+								using Flatgeobuf. View the source code on
 								<a href="https://github.com/erxclau/us-streets">GitHub</a>.</small
 							>
 						</p>
