@@ -3765,7 +3765,11 @@ const formatNumberOrdinal = (d: number) => {
 	return `${d}${suffixes[ordinal.select(d)]}`;
 };
 
-export const matchFeature = (f: RoadFeature, attempt: string) => {
+export const matchFeature = (
+	f: RoadFeature,
+	attempt: string,
+	options: { requireDirection: boolean }
+) => {
 	if (f.properties.FULLNAME.toLowerCase() === attempt) {
 		return true;
 	}
@@ -3773,7 +3777,9 @@ export const matchFeature = (f: RoadFeature, attempt: string) => {
 	const prefixQualifier =
 		f.properties.PREQUAL === undefined ? undefined : qualifiers[f.properties.PREQUAL];
 	const prefixDirection =
-		f.properties.PREDIR === undefined ? undefined : directions[f.properties.PREDIR];
+		f.properties.PREDIR === undefined || !options.requireDirection
+			? undefined
+			: directions[f.properties.PREDIR];
 	const prefixType = f.properties.PRETYP === undefined ? undefined : types[f.properties.PRETYP];
 
 	const base = f.properties.NAME;
@@ -3791,7 +3797,9 @@ export const matchFeature = (f: RoadFeature, attempt: string) => {
 
 	const suffixType = f.properties.SUFTYP === undefined ? undefined : types[f.properties.SUFTYP];
 	const suffixDirection =
-		f.properties.SUFDIR === undefined ? undefined : directions[f.properties.SUFDIR];
+		f.properties.SUFDIR === undefined || !options.requireDirection
+			? undefined
+			: directions[f.properties.SUFDIR];
 	const suffixQualifier =
 		f.properties.SUFQUAL === undefined ? undefined : qualifiers[f.properties.SUFQUAL];
 

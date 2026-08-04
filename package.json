@@ -47,6 +47,7 @@
     "@types/geojson": "^7946.0.16",
     "d3-array": "^3.2.4",
     "flatgeobuf": "^4.4.0",
-    "mapbox-gl": "^3.27.0"
+    "mapbox-gl": "^3.27.0",
+    "svelte-sonner": "^1.1.1"
   }
 }

@@ -8,6 +8,7 @@
 	import type { Feature, GeoJsonProperties, Geometry } from 'geojson';
 	import length from '@turf/length';
 	import { ascending, sum } from 'd3-array';
+	import { Toaster, toast, type ToastOptions } from 'svelte-sonner';
 
 	import { PUBLIC_MAPBOX_TOKEN } from '$env/static/public';
 	import { formatFeatureName, matchFeature, type RoadFeature } from './tiger';
@@ -40,7 +41,18 @@
 	);
 
 	const modalId = 'confirm-reset-progress';
-	const localStorageKey = $derived(fips === undefined ? bboxCoordinates : fips);
+	const localStoragePlaceKey = $derived(fips === undefined ? bboxCoordinates : fips);
+	const localStorageRequireDirectionKey = 'us-streets.require-direction';
+	const localStorageRequireDirectionToastKey = 'us-streets.require-direction-toast';
+
+	const toastOptions: ToastOptions = {
+		unstyled: true,
+		classes: {
+			toast: 'toast',
+			title: 'toast-title',
+			closeButton: 'toast-close-button'
+		}
+	};
 
 	let map: MapboxMap;
 	let ref: HTMLDivElement;
@@ -76,12 +88,15 @@
 		}
 	};
 
+	let requireDirection = $state<boolean | undefined>(undefined);
+	let requireDirectionToast = $state<boolean>(true);
+
 	onMount(() => {
-		const localObjectIds = localStorage.getItem(localStorageKey);
-		if (localObjectIds !== null) {
+		const localLinearIds = localStorage.getItem(localStoragePlaceKey);
+		if (localLinearIds !== null) {
 			let json: Array<string> = [];
 			try {
-				json = JSON.parse(localObjectIds);
+				json = JSON.parse(localLinearIds);
 			} catch (e) {
 				console.error(e);
 			}
@@ -89,6 +104,33 @@
 			if (Array.isArray(json)) {
 				linearIds = new SvelteSet(json);
 			}
+		}
+
+		const localRequireDirection = localStorage.getItem(localStorageRequireDirectionKey);
+		if (localRequireDirection !== null) {
+			let value: boolean | undefined = undefined;
+			try {
+				value = JSON.parse(localRequireDirection);
+			} catch (e) {
+				console.error(e);
+			}
+
+			requireDirection = value;
+			if (requireDirection === false) {
+				requireDirectionToast = false;
+			}
+		}
+
+		const localRequireDirectionToast = localStorage.getItem(localStorageRequireDirectionToastKey);
+		if (localRequireDirectionToast !== null) {
+			let value: boolean | undefined = undefined;
+			try {
+				value = JSON.parse(localRequireDirectionToast);
+			} catch (e) {
+				console.error(e);
+			}
+
+			requireDirectionToast = value ?? true;
 		}
 
 		map = new MapboxMap({
@@ -189,7 +231,24 @@
 	});
 
 	$effect(() => {
-		localStorage.setItem(localStorageKey, JSON.stringify(Array.from(linearIds)));
+		localStorage.setItem(localStoragePlaceKey, JSON.stringify(Array.from(linearIds)));
+	});
+
+	$effect(() => {
+		if (requireDirection !== undefined) {
+			localStorage.setItem(localStorageRequireDirectionKey, JSON.stringify(requireDirection));
+			if (requireDirection === false) {
+				requireDirectionToast = false;
+				toast.dismiss();
+			}
+		}
+	});
+
+	$effect(() => {
+		localStorage.setItem(
+			localStorageRequireDirectionToastKey,
+			JSON.stringify(requireDirectionToast)
+		);
 	});
 </script>
 
@@ -205,6 +264,8 @@
 
 			<form
 				onsubmit={async (e) => {
+					toast.dismiss();
+
 					e.preventDefault();
 					const formData = new FormData(e.currentTarget);
 					const attemptData = formData.get('attempt');
@@ -214,7 +275,11 @@
 					}
 
 					const attempt = attemptData.toString().toLowerCase().trim();
-					const matchedFeatures = features.filter((f) => matchFeature(f, attempt));
+					const matchedFeatures = features.filter((f) =>
+						matchFeature(f, attempt, {
+							requireDirection: requireDirection || requireDirection === undefined
+						})
+					);
 
 					let oldLinearIdsSize = linearIds.size;
 
@@ -226,6 +291,25 @@
 						updateFeatureState();
 						e.currentTarget.reset();
 						return;
+					}
+
+					if ((requireDirection || requireDirection === undefined) && requireDirectionToast) {
+						const matchDirectionlessFeatures = features.filter((f) =>
+							matchFeature(f, attempt, {
+								requireDirection: false
+							})
+						);
+
+						if (matchDirectionlessFeatures.length > 0) {
+							toast(
+								'Street directions are required. You can turn off the requirement in the settings.',
+								{
+									duration: Number.POSITIVE_INFINITY
+								}
+							);
+
+							requireDirectionToast = false;
+						}
 					}
 
 					const input = e.currentTarget.querySelector('input');
@@ -286,46 +370,59 @@
 				<div style="padding-left: 0.625rem; display: grid; gap: 0.375rem;">
 					<Details />
 
-					<div>
-						<button command="show-modal" commandfor={modalId} disabled={linearIds.size === 0}
-							>Reset progress</button
-						>
+					<div style="display: flex; flex-wrap: wrap; flex-direction: column; gap: 0.5rem;">
+						<div class="checkbox">
+							<input
+								type="checkbox"
+								name="require-direction"
+								id="require-direction"
+								bind:checked={requireDirection}
+								defaultChecked
+							/>
+							<label for="require-direction">Require direction</label>
+						</div>
 
-						<dialog id={modalId}>
-							<div style="display: grid; gap: var(--gap);">
-								<p>Are you sure you want to reset your progress?</p>
-
-								<menu>
-									<li>
-										<button commandfor={modalId} command="close">Cancel</button>
-									</li>
-									<li>
-										<form method="dialog">
-											<button
-												onclick={() => {
-													for (const id of linearIds) {
-														const featureSelector = {
-															id: id,
-															source: 'source-features'
-														} as FeatureSelector;
-
-														const highlighted = map.getFeatureState(featureSelector)?.['highlight'];
-														if (highlighted) {
-															map.setFeatureState(featureSelector, {
-																highlight: false
-															});
-														}
-													}
-
-													linearIds = new SvelteSet();
-												}}>Confirm</button
-											>
-										</form>
-									</li>
-								</menu>
-							</div>
-						</dialog>
+						<div>
+							<button command="show-modal" commandfor={modalId} disabled={linearIds.size === 0}
+								>Reset progress</button
+							>
+						</div>
 					</div>
+
+					<dialog id={modalId}>
+						<div style="display: grid; gap: var(--gap);">
+							<p>Are you sure you want to reset your progress?</p>
+
+							<menu>
+								<li>
+									<button commandfor={modalId} command="close">Cancel</button>
+								</li>
+								<li>
+									<form method="dialog">
+										<button
+											onclick={() => {
+												for (const id of linearIds) {
+													const featureSelector = {
+														id: id,
+														source: 'source-features'
+													} as FeatureSelector;
+
+													const highlighted = map.getFeatureState(featureSelector)?.['highlight'];
+													if (highlighted) {
+														map.setFeatureState(featureSelector, {
+															highlight: false
+														});
+													}
+												}
+
+												linearIds = new SvelteSet();
+											}}>Confirm</button
+										>
+									</form>
+								</li>
+							</menu>
+						</div>
+					</dialog>
 				</div>
 			</details>
 		</div>
@@ -334,6 +431,13 @@
 	<figure>
 		<div id="map" bind:this={ref}></div>
 	</figure>
+	<div class="desktop-toaster">
+		<Toaster position="bottom-right" closeButton {toastOptions} />
+	</div>
+
+	<div class="mobile-toaster">
+		<Toaster position="top-center" closeButton {toastOptions} />
+	</div>
 </main>
 
 <style>
@@ -362,7 +466,8 @@
 
 	hgroup,
 	dialog,
-	button {
+	button,
+	:global(.toast-close-button) {
 		box-shadow: 0 0 1px 1px rgb(from var(--color-neutral) r g b / 0.25);
 		border-radius: 0.375rem;
 	}
@@ -381,7 +486,8 @@
 		max-width: fit-content;
 	}
 
-	button {
+	button,
+	:global(.toast-close-button) {
 		font-family: var(--font-sans);
 		background-color: var(--color-primary);
 		color: var(--color-secondary);
@@ -396,12 +502,14 @@
 
 	button:active,
 	button:hover,
-	button:focus {
+	button:focus,
+	:global(.toast-close-button:active, .toast-close-button:hover, .toast-close-button:focus) {
 		background-color: var(--color-highlight);
 		color: var(--color-secondary-active);
 	}
 
-	button:disabled {
+	button:disabled,
+	:global(.toast-close-button:disabled) {
 		background-color: var(--color-primary);
 		color: var(--color-secondary);
 		opacity: 50%;
@@ -418,6 +526,10 @@
 		background-color: inherit;
 	}
 
+	.mobile-toaster {
+		display: none;
+	}
+
 	@media screen and (max-width: 600px) {
 		hgroup {
 			--padding: 0.625rem;
@@ -428,6 +540,14 @@
 			top: unset;
 			bottom: var(--margin);
 			max-height: 50vh;
+		}
+
+		.mobile-toaster {
+			display: block;
+		}
+
+		.desktop-toaster {
+			display: none;
 		}
 
 		:global(.mapboxgl-ctrl-bottom-right, .mapboxgl-ctrl-bottom-left) {
@@ -464,6 +584,23 @@
 		font-size: 1rem;
 		color: var(--color-neutral);
 		text-wrap: pretty;
+	}
+
+	.checkbox {
+		display: flex;
+		gap: 0.25rem;
+		align-items: center;
+	}
+
+	input[type='checkbox'] {
+		margin: 0;
+		accent-color: var(--color--dark-highlight);
+	}
+
+	label {
+		font-family: var(--font-sans);
+		font-size: 0.875rem;
+		color: var(--color-neutral);
 	}
 
 	a {
@@ -573,5 +710,39 @@
 
 	:global(.shake) {
 		animation: shake 0.375s ease-in-out;
+	}
+
+	:global(.toast-title) {
+		font-family: var(--font-sans);
+		font-size: 0.875rem;
+		line-height: 1.125rem;
+	}
+
+	:global(.toast) {
+		padding: 0.875rem;
+		box-shadow: 0 0 1px 1px rgb(from var(--color-neutral) r g b / 0.25);
+		border-radius: 0.375rem;
+		background-color: var(--color-secondary);
+		width: 100%;
+		box-sizing: border-box;
+		max-width: 400px;
+	}
+
+	:global(.toast-close-button) {
+		--size: 20px;
+		width: var(--size);
+		height: var(--size);
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		font-size: 1rem;
+		border-radius: 100%;
+		position: absolute;
+		top: calc(-0.25 * var(--size));
+		left: calc(-0.25 * var(--size));
+	}
+
+	:global(.toast-close-button svg) {
+		transform: scale(1.5);
 	}
 </style>
