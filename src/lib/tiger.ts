@@ -3782,19 +3782,6 @@ export const matchFeature = (
 			: directions[f.properties.PREDIR];
 	const prefixType = f.properties.PRETYP === undefined ? undefined : types[f.properties.PRETYP];
 
-	const base = f.properties.NAME;
-
-	let numericalBase: string | undefined = undefined;
-	const numericalMatch = base.match(/^\d+/);
-	if (numericalMatch !== null && numericalMatch.length > 0) {
-		const parsedNumericalMatch = +numericalMatch[0];
-		if (!isNaN(parsedNumericalMatch)) {
-			if (formatNumberOrdinal(parsedNumericalMatch) === base) {
-				numericalBase = String(parsedNumericalMatch);
-			}
-		}
-	}
-
 	const suffixType = f.properties.SUFTYP === undefined ? undefined : types[f.properties.SUFTYP];
 	const suffixDirection =
 		f.properties.SUFDIR === undefined || !options.requireDirection
@@ -3815,7 +3802,7 @@ export const matchFeature = (
 			prefixType?.expandedFullText,
 			prefixType?.spanishTranslation
 		],
-		[base, numericalBase],
+		[f.properties.NAME, parseNumericalBaseName(f)],
 		[
 			suffixType?.displayNameAbbreviation,
 			suffixType?.expandedFullText,
@@ -3836,6 +3823,22 @@ export const matchFeature = (
 		.filter((component) => component.length > 0);
 
 	return match(attempt, '', components[0], ...components.slice(1));
+};
+
+export const parseNumericalBaseName = (f: RoadFeature) => {
+	const base = f.properties.NAME;
+	let numericalBase: string | undefined = undefined;
+	const numericalMatch = base.match(/^\d+/);
+	if (numericalMatch !== null && numericalMatch.length > 0) {
+		const parsedNumericalMatch = +numericalMatch[0];
+		if (!isNaN(parsedNumericalMatch)) {
+			if (formatNumberOrdinal(parsedNumericalMatch) === base) {
+				numericalBase = String(parsedNumericalMatch);
+			}
+		}
+	}
+
+	return numericalBase;
 };
 
 export const formatFeatureName = (f: RoadFeature) => {

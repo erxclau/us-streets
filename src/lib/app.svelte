@@ -11,7 +11,12 @@
 	import { Toaster, toast, type ToastOptions } from 'svelte-sonner';
 
 	import { PUBLIC_MAPBOX_TOKEN } from '$env/static/public';
-	import { formatFeatureName, matchFeature, type RoadFeature } from './tiger';
+	import {
+		formatFeatureName,
+		matchFeature,
+		parseNumericalBaseName,
+		type RoadFeature
+	} from './tiger';
 	import Details from './details.svelte';
 	import H1 from './h1.svelte';
 	import Input from './input.svelte';
@@ -67,7 +72,47 @@
 	const identifiedFeatures = $derived(features.filter((d) => linearIds.has(d.properties.LINEARID)));
 
 	const identifiedStreets = $derived(
-		Array.from(new Set(identifiedFeatures.map(formatFeatureName))).sort(ascending)
+		Array.from(
+			new Set(
+				identifiedFeatures
+					.map((f) => [f, formatFeatureName(f)] as const)
+					.sort(([a, aFormattedName], [b, bFormattedName]) => {
+						const aNumericalBase = parseNumericalBaseName(a);
+						const bNumericalBase = parseNumericalBaseName(b);
+
+						if (aNumericalBase === undefined || bNumericalBase === undefined) {
+							return ascending(aFormattedName, bFormattedName);
+						}
+
+						const aNum = +aNumericalBase;
+						const bNum = +bNumericalBase;
+
+						const aRest = aFormattedName.replace(a.properties.NAME, '').trim();
+						const bRest = bFormattedName.replace(b.properties.NAME, '').trim();
+
+						const aPrefix =
+							a.properties.PREDIR !== undefined ||
+							a.properties.PREQUAL !== undefined ||
+							a.properties.PRETYP !== undefined;
+
+						const bPrefix =
+							b.properties.PREDIR !== undefined ||
+							b.properties.PREQUAL !== undefined ||
+							b.properties.PRETYP !== undefined;
+
+						if (!aPrefix && !bPrefix) {
+							return ascending(aNum, bNum) || ascending(aRest, bRest);
+						}
+
+						if (aPrefix && bPrefix) {
+							return ascending(aRest, bRest) || ascending(aNum, bNum);
+						}
+
+						return ascending(aFormattedName, bFormattedName);
+					})
+					.map((d) => d[1])
+			)
+		)
 	);
 
 	const identifiedMiles = $derived(sum(identifiedFeatures, (d) => length(d, { units: 'miles' })));
@@ -282,6 +327,7 @@
 					);
 
 					if (requireDirection === false) {
+						// TODO: is there a way to skip this or incorporate optional direction check in the recursion?
 						const matchedDirectionFeatures = features.filter((f) =>
 							matchFeature(f, attempt, {
 								requireDirection: true
